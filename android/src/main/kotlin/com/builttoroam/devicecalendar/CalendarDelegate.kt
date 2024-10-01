@@ -905,6 +905,7 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
         val accountName = cursor.getString(Cst.CALENDAR_PROJECTION_ACCOUNT_NAME_INDEX)
         val accountType = cursor.getString(Cst.CALENDAR_PROJECTION_ACCOUNT_TYPE_INDEX)
         val ownerAccount = cursor.getString(Cst.CALENDAR_PROJECTION_OWNER_ACCOUNT_INDEX)
+        val externalID = cursor.getString(Cst.CALENDAR_PROJECTION_SYNC_ID_INDEX)
 
         val calendar = Calendar(
             calId.toString(),
@@ -912,7 +913,8 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
             calendarColor,
             accountName,
             accountType,
-            ownerAccount
+            ownerAccount,
+            externalID
         )
 
         calendar.isReadOnly = isCalendarReadOnly(accessLevel)
@@ -944,11 +946,11 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
         val eventStatus = parseEventStatus(cursor.getInt(Cst.EVENT_PROJECTION_STATUS_INDEX))
         val eventColor = cursor.getInt(Cst.EVENT_PROJECTION_EVENT_COLOR_INDEX)
         val eventColorKey = cursor.getInt(Cst.EVENT_PROJECTION_EVENT_COLOR_KEY_INDEX)
-        val externalEventId = cursor.getInt(Cst.EVENT_PROJECTION_SYNC_ID_INDEX)
+        val externalEventId = cursor.getString(Cst.EVENT_PROJECTION_SYNC_ID_INDEX)
         val event = Event()
         event.eventTitle = title ?: "New Event"
         event.eventId = eventId.toString()
-        event.externalEventId = externalEventId.toString()
+        event.externalEventId = externalEventId
         event.calendarId = calendarId
         event.eventDescription = description
         event.eventStartDate = begin

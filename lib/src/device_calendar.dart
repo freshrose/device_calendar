@@ -28,6 +28,15 @@ class DeviceCalendarPlugin {
   @visibleForTesting
   DeviceCalendarPlugin.private();
 
+  /// Refreshes sources on iOS
+  ///
+  /// Use this method to pull new data from remote sources if the local data is out of date.
+  Future<Result<bool>> refreshSources() async {
+    return _invokeChannelMethod(
+      ChannelConstants.methodNameRefreshSources,
+    );
+  }
+
   /// Requests permissions to modify the calendars on the device
   ///
   /// Returns a [Result] indicating if calendar READ and WRITE permissions

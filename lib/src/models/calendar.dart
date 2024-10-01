@@ -21,6 +21,12 @@ class Calendar {
   // Read-only. Account type associated with the calendar
   String? accountType;
 
+  // Read-only. The external id of the calendar
+  String? externalID;
+
+  // Read-only. The owner email of the calendar
+  String? ownerAccount;
+
   Calendar(
       {this.id,
       this.name,
@@ -28,7 +34,9 @@ class Calendar {
       this.isDefault,
       this.color,
       this.accountName,
-      this.accountType});
+      this.accountType,
+      this.externalID,
+      this.ownerAccount});
 
   Calendar.fromJson(Map<String, dynamic> json) {
     id = json['id'];
@@ -38,6 +46,8 @@ class Calendar {
     color = json['color'];
     accountName = json['accountName'];
     accountType = json['accountType'];
+    externalID = json['externalID'];
+    ownerAccount = json['ownerAccount'];
   }
 
   Map<String, dynamic> toJson() {
@@ -48,7 +58,9 @@ class Calendar {
       'isDefault': isDefault,
       'color': color,
       'accountName': accountName,
-      'accountType': accountType
+      'accountType': accountType,
+      'externalID': externalID,
+      'ownerAccount': ownerAccount
     };
 
     return data;

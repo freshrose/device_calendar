@@ -104,6 +104,7 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
     let calendarReadOnlyErrorMessageFormat = "Calendar with ID %@ is read-only"
     let eventNotFoundErrorMessageFormat = "The event with the ID %@ could not be found"
     let eventStore = EKEventStore()
+    let refreshSourcesMethod = "refreshSources"
     let requestPermissionsMethod = "requestPermissions"
     let hasPermissionsMethod = "hasPermissions"
     let retrieveCalendarsMethod = "retrieveCalendars"
@@ -170,6 +171,8 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
             requestPermissions(result)
         case hasPermissionsMethod:
             hasPermissions(result)
+        case refreshSourcesMethod:
+            refreshSources(result)
         case retrieveCalendarsMethod:
             retrieveCalendars(result)
         case retrieveEventsMethod:
@@ -192,6 +195,11 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
         default:
             result(FlutterMethodNotImplemented)
         }
+    }
+
+    private func refreshSources(_ result: FlutterResult) {
+        eventStore.refreshSourcesIfNecessary()
+        result(true)
     }
 
     private func hasPermissions(_ result: FlutterResult) {
@@ -286,7 +294,89 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
             let ekCalendars = self.eventStore.calendars(for: .event)
             let defaultCalendar = self.eventStore.defaultCalendarForNewEvents
             var calendars = [DeviceCalendar]()
+
+            var ownerAccountSourceIdentifierMap: [String: Set<String>] = [:]
+
             for ekCalendar in ekCalendars {
+                var ownerAccount = "";
+                let sharedOwnerMailTo = ekCalendar.value(forKeyPath: "_persistentObject._loadedProperties.sharedOwnerURLString") as? String;
+                let desiredOwnerAccount = sharedOwnerMailTo?.replacingOccurrences(of: "mailto:", with: "") ?? "";
+                if (desiredOwnerAccount.isEmpty != true && (desiredOwnerAccount.contains("%") != true && desiredOwnerAccount.contains("group.calendar") != true)) {
+                    ownerAccount = desiredOwnerAccount;
+                    let sourceIdentifierSet = ownerAccountSourceIdentifierMap[ownerAccount];
+                    if (sourceIdentifierSet == nil) {
+                        ownerAccountSourceIdentifierMap[ownerAccount] = Set([ekCalendar.source.sourceIdentifier]);
+                    } else {
+                        ownerAccountSourceIdentifierMap[ownerAccount]?.insert(ekCalendar.source.sourceIdentifier);
+                    }
+                }
+                if (ownerAccount.isEmpty) {
+                    let startDate = Date(timeIntervalSince1970: 0);
+                    let endDate = Date(timeIntervalSinceNow: 0);
+                    let fourYearsInSeconds = 4 * 365 * 24 * 60 * 60
+                    let fourYearsTimeInterval = TimeInterval(fourYearsInSeconds)
+                    var currentStartDate = startDate
+                    // Adding 4 years to the start date
+                    var currentEndDate = startDate.addingTimeInterval(fourYearsTimeInterval)
+
+                    while currentEndDate <= endDate {
+                        let predicate = self.eventStore.predicateForEvents(
+                            withStart: currentStartDate,
+                            end: currentEndDate.addingTimeInterval(-1),
+                            calendars: [ekCalendar])
+                        let batch = self.eventStore.events(matching: predicate)
+                        for ekEvent in batch {
+                            let organiser = convertEkParticipantToAttendee(ekParticipant: ekEvent.organizer);
+                            if (organiser != nil) {
+                                if (organiser?.isCurrentUser == true) {
+                                    let organiserEmail = organiser?.emailAddress ?? "";
+                                    if (organiserEmail.isEmpty != true && organiserEmail.contains("%") != true && organiserEmail.contains("group.calendar") != true) {
+                                        ownerAccount = organiserEmail;
+                                        if (ownerAccount.isEmpty != true) {
+                                            // Break from the organiser loop
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            for attendee in ekEvent.attendees ?? [] {
+                                if (attendee.isCurrentUser) {
+                                    let attendeeEmail = attendee.emailAddress ?? "";
+                                    if (attendeeEmail.isEmpty != true && attendeeEmail.contains("%") != true && attendeeEmail.contains("group.calendar") != true) {
+                                        ownerAccount = attendeeEmail;
+                                        if (ownerAccount.isEmpty != true) {
+                                            // Break from the attendee loop
+                                            break;
+                                        }
+                                    }
+
+                                }
+                            }
+                            if (ownerAccount.isEmpty != true) {
+                                // Break from the event loop
+                                break;
+                            }
+                        }
+                        if (ownerAccount.isEmpty != true) {
+                            let sourceIdentifierSet = ownerAccountSourceIdentifierMap[ownerAccount];
+                            if (sourceIdentifierSet == nil) {
+                                ownerAccountSourceIdentifierMap[ownerAccount] = Set([ekCalendar.source.sourceIdentifier]);
+                            } else {
+                                ownerAccountSourceIdentifierMap[ownerAccount]?.insert(ekCalendar.source.sourceIdentifier);
+                            }
+                            // Break out of the event scanning loop
+                            break;
+                        }
+                        // Move the start and end dates forward by the [fourYearsTimeInterval]
+                        currentStartDate = currentEndDate
+                        currentEndDate = currentStartDate.addingTimeInterval(fourYearsTimeInterval)
+                    }
+                }
+            }
+
+            for ekCalendar in ekCalendars {
+                let ownerAccount = ownerAccountSourceIdentifierMap.first(where: { $0.value.contains(ekCalendar.source.sourceIdentifier)})?.key
                 let calendar = DeviceCalendar(
                     id: ekCalendar.calendarIdentifier,
                     name: ekCalendar.title,
@@ -294,7 +384,9 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
                     isDefault: defaultCalendar?.calendarIdentifier == ekCalendar.calendarIdentifier,
                     color: UIColor(cgColor: ekCalendar.cgColor).rgb()!,
                     accountName: ekCalendar.source.title,
-                    accountType: getAccountType(ekCalendar.source.sourceType))
+                    accountType: getAccountType(ekCalendar.source.sourceType),
+                    externalID: (ekCalendar.value(forKeyPath: "_persistentObject._loadedProperties.externalID") as? String) ?? "",
+                    ownerAccount: ownerAccount ?? "")
                 calendars.append(calendar)
             }
 
