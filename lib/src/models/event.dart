@@ -11,6 +11,9 @@ class Event {
   /// Read-only. The unique identifier for this event. This is auto-generated when a new event is created
   String? eventId;
 
+  /// Read-only. The calendar item’s external identifier as provided by the calendar server.
+  String? externalEventId;
+
   /// Read-only. The identifier of the calendar that this event is associated with
   String? calendarId;
 
@@ -68,6 +71,7 @@ class Event {
   ///`android/src/main/kotlin/com/builttoroam/devicecalendar/DeviceCalendarPlugin.kt`
   Event(this.calendarId,
       {this.eventId,
+      this.externalEventId,
       this.title,
       this.start,
       this.end,
@@ -233,6 +237,7 @@ class Event {
 
     data['calendarId'] = calendarId;
     data['eventId'] = eventId;
+    data['externalEventId'] = externalEventId;
     data['eventTitle'] = title;
     data['eventDescription'] = description;
     data['eventStartDate'] = start?.millisecondsSinceEpoch ??
