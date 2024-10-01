@@ -118,6 +118,7 @@ class Event {
     });
 
     eventId = json['eventId'];
+    externalEventId = json['externalEventId'];
     calendarId = json['calendarId'];
     title = json['eventTitle'];
     description = json['eventDescription'];
