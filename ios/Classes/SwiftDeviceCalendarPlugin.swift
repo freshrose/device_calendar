@@ -926,7 +926,7 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
 
             do {
                 try self.eventStore.save(ekEvent!, span: .futureEvents)
-                result(ekEvent!.eventIdentifier)
+                result(ekEvent!.calendarItemExternalIdentifier)
             } catch {
                 self.eventStore.reset()
                 result(FlutterError(code: self.genericError, message: error.localizedDescription, details: nil))
