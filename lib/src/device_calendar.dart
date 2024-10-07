@@ -138,6 +138,7 @@ class DeviceCalendarPlugin {
   Future<Result<bool>> deleteEvent(
     String? calendarId,
     String? eventId,
+    String? externalEventId,
   ) async {
     return _invokeChannelMethod(
       ChannelConstants.methodNameDeleteEvent,
@@ -149,7 +150,8 @@ class DeviceCalendarPlugin {
 
         _assertParameter(
           result,
-          eventId?.isNotEmpty ?? false,
+          (eventId != null && eventId.isNotEmpty) ||
+              (externalEventId != null && externalEventId.isNotEmpty),
           ErrorCodes.invalidArguments,
           ErrorMessages.deleteEventInvalidArgumentsMessage,
         );
@@ -157,6 +159,7 @@ class DeviceCalendarPlugin {
       arguments: () => <String, Object?>{
         ChannelConstants.parameterNameCalendarId: calendarId,
         ChannelConstants.parameterNameEventId: eventId,
+        ChannelConstants.parameterNameExternalEventId: externalEventId,
       },
     );
   }
