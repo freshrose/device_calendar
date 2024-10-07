@@ -103,6 +103,7 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
     let calendarNotFoundErrorMessageFormat = "The calendar with the ID %@ could not be found"
     let calendarReadOnlyErrorMessageFormat = "Calendar with ID %@ is read-only"
     let eventNotFoundErrorMessageFormat = "The event with the ID %@ could not be found"
+    let externalEventNotFoundErrorMessageFormat = "The event with the externalID %@ could not be found"
     let eventStore = EKEventStore()
     let refreshSourcesMethod = "refreshSources"
     let requestPermissionsMethod = "requestPermissions"
@@ -882,13 +883,13 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
                 ekEvent = matchingItems.first as? EKEvent  // Safely cast to EKEvent
 
                 if ekEvent == nil {
-                    self.finishWithEventNotFoundError(result: result, eventId: externalEventId)
+                    self.finishWithExternalEventIdNotFoundError(result: result, eventId: externalEventId)
                     return
                 }
             } else {
                 ekEvent = self.eventStore.event(withIdentifier: eventId!)
                 if(ekEvent == nil) {
-                    self.finishWithEventNotFoundError(result: result, eventId: eventId!)
+                    self.finishWithEventIdNotFoundError(result: result, eventId: eventId!)
                     return
                 }
             }
@@ -926,7 +927,7 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
 
             do {
                 try self.eventStore.save(ekEvent!, span: .futureEvents)
-                result(ekEvent!.calendarItemExternalIdentifier)
+                result(ekEvent!.eventIdentifier)
             } catch {
                 self.eventStore.reset()
                 result(FlutterError(code: self.genericError, message: error.localizedDescription, details: nil))
@@ -955,7 +956,7 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
                 return
             }
             let eventId = arguments[eventIdArgument] as? String
-            let externalEventId = arguments[eventIdArgument] as? String
+            let externalEventId = arguments[externalEventIdArgument] as? String
             let startDateNumber = arguments[eventStartDateArgument] as? NSNumber
             let endDateNumber = arguments[eventEndDateArgument] as? NSNumber
             let followingInstances = arguments[followingInstancesArgument] as? Bool ?? false
@@ -981,7 +982,7 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
                     let foundEkEvents = self.eventStore.calendarItems(withExternalIdentifier: externalEventId) as? [EKEvent]
 
                     guard let events = foundEkEvents, !events.isEmpty else {
-                        self.finishWithEventNotFoundError(result: result, eventId: externalEventId)
+                        self.finishWithExternalEventIdNotFoundError(result: result, eventId: externalEventId)
                         return
                     }
 
@@ -999,7 +1000,7 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
                 } else if let eventId = eventId {
                     // Delete event using event identifier
                     guard let ekEvent = self.eventStore.event(withIdentifier: eventId) else {
-                        self.finishWithEventNotFoundError(result: result, eventId: eventId)
+                        self.finishWithEventIdNotFoundError(result: result, eventId: eventId)
                         return
                     }
 
@@ -1010,6 +1011,8 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
                         self.eventStore.reset()
                         result(FlutterError(code: self.genericError, message: error.localizedDescription, details: nil))
                     }
+                } else {
+                    result(FlutterError(code: self.genericError, message: "Missing externalEventId or eventId", details: nil))
                 }
             }
             else {
@@ -1024,24 +1027,24 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
                 if let externalEventId = externalEventId {
 
                     if foundEkEvents == nil || foundEkEvents?.count == 0 {
-                        self.finishWithEventNotFoundError(result: result, eventId: externalEventId)
+                        self.finishWithExternalEventIdNotFoundError(result: result, eventId: externalEventId)
                         return
                     }
 
                     guard let ekEvent = foundEkEvents!.first(where: { $0.calendarItemExternalIdentifier == externalEventId }) as EKEvent?  else {
-                        self.finishWithEventNotFoundError(result: result, eventId: externalEventId)
+                        self.finishWithExternalEventIdNotFoundError(result: result, eventId: externalEventId)
                         return
                     }
                     deleteEventAndHandleResult(ekEvent: ekEvent, followingInstances: followingInstances, result: result)
                 } else if let eventId = eventId {
 
                     if foundEkEvents == nil || foundEkEvents?.count == 0 {
-                        self.finishWithEventNotFoundError(result: result, eventId: eventId)
+                        self.finishWithEventIdNotFoundError(result: result, eventId: eventId)
                         return
                     }
 
                     guard let ekEvent = foundEkEvents!.first(where: { $0.eventIdentifier == eventId }) else {
-                        self.finishWithEventNotFoundError(result: result, eventId: eventId)
+                        self.finishWithEventIdNotFoundError(result: result, eventId: eventId)
                         return
                     }
                     deleteEventAndHandleResult(ekEvent: ekEvent, followingInstances: followingInstances, result: result)
@@ -1132,8 +1135,13 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
         result(FlutterError(code:self.notAllowed, message: errorMessage, details: nil))
     }
 
-    private func finishWithEventNotFoundError(result: @escaping FlutterResult, eventId: String) {
+    private func finishWithEventIdNotFoundError(result: @escaping FlutterResult, eventId: String) {
         let errorMessage = String(format: self.eventNotFoundErrorMessageFormat, eventId)
+        result(FlutterError(code:self.notFoundErrorCode, message: errorMessage, details: nil))
+    }
+
+    private func finishWithExternalEventIdNotFoundError(result: @escaping FlutterResult, eventId: String) {
+        let errorMessage = String(format: self.externalEventNotFoundErrorMessageFormat, eventId)
         result(FlutterError(code:self.notFoundErrorCode, message: errorMessage, details: nil))
     }
 
