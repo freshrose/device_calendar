@@ -136,10 +136,10 @@ class DeviceCalendarPlugin {
   ///
   /// Returns a [Result] indicating if the event has (true) or has not (false) been deleted from the calendar
   Future<Result<bool>> deleteEvent(
-    String? calendarId,
+    String? calendarId, {
     String? eventId,
     String? externalEventId,
-  ) async {
+  }) async {
     return _invokeChannelMethod(
       ChannelConstants.methodNameDeleteEvent,
       assertParameters: (result) {

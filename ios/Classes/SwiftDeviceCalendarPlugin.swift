@@ -121,6 +121,7 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
     let startDateArgument = "startDate"
     let endDateArgument = "endDate"
     let eventIdArgument = "eventId"
+    let externalEventIdArgument = "externalEventId"
     let eventIdsArgument = "eventIds"
     let eventTitleArgument = "eventTitle"
     let eventDescriptionArgument = "eventDescription"
