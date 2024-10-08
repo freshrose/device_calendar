@@ -819,7 +819,7 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
                     )
 
                     while (instanceCursor.moveToNext()) {
-                        val foundEventID = cursor.getLong(Cst.EVENT_INSTANCE_DELETION_ID_INDEX)
+                        val foundEventID = instanceCursor.getLong(Cst.EVENT_INSTANCE_DELETION_ID_INDEX)
 
                         // Check if the event matches by `externalEventId` or `eventId`
                         val isMatch = if (externalEventId != null) {
