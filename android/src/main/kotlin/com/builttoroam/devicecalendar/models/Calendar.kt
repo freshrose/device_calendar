@@ -7,7 +7,6 @@ class Calendar(
     val accountName: String,
     val accountType: String,
     val ownerAccount: String?
-    val ownerAccount: String?,
     val externalID: String?
 ) {
     var isReadOnly: Boolean = false

@@ -37,6 +37,7 @@ private const val START_DATE_ARGUMENT = "startDate"
 private const val END_DATE_ARGUMENT = "endDate"
 private const val EVENT_IDS_ARGUMENT = "eventIds"
 private const val EVENT_ID_ARGUMENT = "eventId"
+private const val EXTERNAL_EVENT_ID_ARGUMENT = "externalEventId"
 private const val EVENT_TITLE_ARGUMENT = "eventTitle"
 private const val EVENT_LOCATION_ARGUMENT = "eventLocation"
 private const val EVENT_URL_ARGUMENT = "eventURL"
@@ -142,19 +143,22 @@ class DeviceCalendarPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             DELETE_EVENT_METHOD -> {
                 val calendarId = call.argument<String>(CALENDAR_ID_ARGUMENT)
                 val eventId = call.argument<String>(EVENT_ID_ARGUMENT)
+                val externalEventId = call.argument<String>(EXTERNAL_EVENT_ID_ARGUMENT)
 
-                _calendarDelegate.deleteEvent(calendarId!!, eventId!!, result)
+                _calendarDelegate.deleteEvent(calendarId!!, eventId, externalEventId, result)
             }
             DELETE_EVENT_INSTANCE_METHOD -> {
                 val calendarId = call.argument<String>(CALENDAR_ID_ARGUMENT)
                 val eventId = call.argument<String>(EVENT_ID_ARGUMENT)
+                val externalEventId = call.argument<String>(EXTERNAL_EVENT_ID_ARGUMENT)
                 val startDate = call.argument<Long>(EVENT_START_DATE_ARGUMENT)
                 val endDate = call.argument<Long>(EVENT_END_DATE_ARGUMENT)
                 val followingInstances = call.argument<Boolean>(FOLLOWING_INSTANCES)
 
                 _calendarDelegate.deleteEvent(
                     calendarId!!,
-                    eventId!!,
+                    eventId,
+                    externalEventId,
                     result,
                     startDate,
                     endDate,
@@ -217,6 +221,7 @@ class DeviceCalendarPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         event.eventTitle = call.argument<String>(EVENT_TITLE_ARGUMENT)
         event.calendarId = calendarId
         event.eventId = call.argument<String>(EVENT_ID_ARGUMENT)
+        event.externalEventId = call.argument<String>(EXTERNAL_EVENT_ID_ARGUMENT)
         event.eventDescription = call.argument<String>(EVENT_DESCRIPTION_ARGUMENT)
         event.eventAllDay = call.argument<Boolean>(EVENT_ALL_DAY_ARGUMENT) ?: false
         event.eventStartDate = call.argument<Long>(EVENT_START_DATE_ARGUMENT)!!

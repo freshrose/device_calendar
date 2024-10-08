@@ -41,6 +41,7 @@ import org.dmfs.rfc5545.recur.Freq as RruleFreq
 import org.dmfs.rfc5545.recur.RecurrenceRule as Rrule
 import android.provider.CalendarContract.Colors
 import androidx.collection.SparseArrayCompat
+import kotlin.text.toLong
 
 private const val RETRIEVE_CALENDARS_REQUEST_CODE = 0
 private const val RETRIEVE_EVENTS_REQUEST_CODE = RETRIEVE_CALENDARS_REQUEST_CODE + 1
@@ -123,6 +124,7 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
                     deleteEvent(
                         cachedValues.calendarId,
                         cachedValues.eventId,
+                        cachedValues.externalEventId,
                         cachedValues.pendingChannelResult
                     )
                 }
@@ -485,15 +487,35 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
 
             val job: Job
             var eventId: Long? = event.eventId?.toLongOrNull()
+            var externalEventId = event.externalEventId;
+
+            if (eventId == null && externalEventId != null) {
+                // Try to find event by externalEventId (_SYNC_ID)
+                val projection = arrayOf(CalendarContract.Events._ID)
+                val cursor = contentResolver?.query(
+                    CalendarContract.Events.CONTENT_URI,
+                    projection,
+                    "${CalendarContract.Events._SYNC_ID} = ?",
+                    arrayOf(externalEventId),
+                    null
+                )
+
+                if (cursor != null && cursor.moveToFirst()) {
+                    eventId = cursor.getLong(cursor.getColumnIndex(CalendarContract.Events._ID))
+                }
+                cursor?.close()
+            }
+
             if (eventId == null) {
+                // Insert a new event since no eventId or externalEventId exists
                 val uri = contentResolver?.insert(Events.CONTENT_URI, values)
-                // get the event ID that is the last element in the Uri
                 eventId = java.lang.Long.parseLong(uri?.lastPathSegment!!)
                 job = GlobalScope.launch(Dispatchers.IO + exceptionHandler) {
                     insertAttendees(event.attendees, eventId, contentResolver)
                     insertReminders(event.reminders, eventId, contentResolver)
                 }
             } else {
+                // Update existing event
                 job = GlobalScope.launch(Dispatchers.IO + exceptionHandler) {
                     contentResolver?.update(
                         ContentUris.withAppendedId(Events.CONTENT_URI, eventId),
@@ -504,13 +526,17 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
                     val existingAttendees =
                         retrieveAttendees(calendar, eventId.toString(), contentResolver)
                     val attendeesToDelete =
-                        if (event.attendees.isNotEmpty()) existingAttendees.filter { existingAttendee -> event.attendees.all { it.emailAddress != existingAttendee.emailAddress } } else existingAttendees
+                        if (event.attendees.isNotEmpty()) existingAttendees.filter { existingAttendee ->
+                            event.attendees.all { it.emailAddress != existingAttendee.emailAddress }
+                        } else existingAttendees
                     for (attendeeToDelete in attendeesToDelete) {
                         deleteAttendee(eventId, attendeeToDelete, contentResolver)
                     }
 
                     val attendeesToInsert =
-                        event.attendees.filter { existingAttendees.all { existingAttendee -> existingAttendee.emailAddress != it.emailAddress } }
+                        event.attendees.filter { existingAttendees.all { existingAttendee ->
+                            existingAttendee.emailAddress != it.emailAddress
+                        } }
                     insertAttendees(attendeesToInsert, eventId, contentResolver)
                     deleteExistingReminders(contentResolver, eventId)
                     insertReminders(event.reminders, eventId, contentResolver!!)
@@ -721,7 +747,8 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
 
     fun deleteEvent(
         calendarId: String,
-        eventId: String,
+        eventId: String? = null,
+        externalEventId: String? = null,
         pendingChannelResult: MethodChannel.Result,
         startDate: Long? = null,
         endDate: Long? = null,
@@ -747,8 +774,11 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
                 return
             }
 
-            val eventIdNumber = eventId.toLongOrNull()
-            if (eventIdNumber == null) {
+            val eventIdNumber = eventId?.toLongOrNull()
+            val externalEventIdNumber = externalEventId;
+
+            // Ensure that at least one of eventId or externalEventId is provided
+            if (eventIdNumber == null && externalEventIdNumber == null) {
                 finishWithError(
                     EC.INVALID_ARGUMENT,
                     EM.EVENT_ID_CANNOT_BE_NULL_ON_DELETION_MESSAGE,
@@ -758,14 +788,28 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
             }
 
             val contentResolver: ContentResolver? = _context?.contentResolver
+            val eventSelection: String
+            val selectionArgs: Array<String>
+
+            if (externalEventId != null) {
+                // Use externalEventId for deletion
+                eventSelection = "${CalendarContract.Events._SYNC_ID} = ?"
+                selectionArgs = arrayOf(externalEventId)
+            } else {
+                // Use eventId for deletion
+                eventSelection = "${CalendarContract.Events._ID} = ?"
+                selectionArgs = arrayOf(eventId!!)
+            }
+
             if (startDate == null && endDate == null && followingInstances == null) { // Delete all instances
-                val eventsUriWithId = ContentUris.withAppendedId(Events.CONTENT_URI, eventIdNumber)
-                val deleteSucceeded = contentResolver?.delete(eventsUriWithId, null, null) ?: 0
+                val deleteSucceeded = contentResolver?.delete(
+                    CalendarContract.Events.CONTENT_URI,
+                    eventSelection,
+                    selectionArgs
+                ) ?: 0
                 finishWithSuccess(deleteSucceeded > 0, pendingChannelResult)
             } else {
                 if (!followingInstances!!) { // Only this instance
-                    val exceptionUriWithId =
-                        ContentUris.withAppendedId(Events.CONTENT_EXCEPTION_URI, eventIdNumber)
                     val values = ContentValues()
                     val instanceCursor = CalendarContract.Instances.query(
                         contentResolver,
@@ -775,24 +819,37 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
                     )
 
                     while (instanceCursor.moveToNext()) {
-                        val foundEventID =
-                            instanceCursor.getLong(Cst.EVENT_INSTANCE_DELETION_ID_INDEX)
+                        val foundEventID = cursor.getLong(Cst.EVENT_INSTANCE_DELETION_ID_INDEX)
 
-                        if (eventIdNumber == foundEventID) {
+                        // Check if the event matches by `externalEventId` or `eventId`
+                        val isMatch = if (externalEventId != null) {
+                            val eventSyncId = instanceCursor.getString(Cst.EVENT_INSTANCE_DELETION_SYNC_ID_INDEX)
+                            externalEventId == eventSyncId
+                        } else {
+                            eventId?.toLong() == foundEventID
+                        }
+
+                        if (isMatch) {
+                            // If it matches, mark it as canceled
                             values.put(
-                                Events.ORIGINAL_INSTANCE_TIME,
+                                CalendarContract.Events.ORIGINAL_INSTANCE_TIME,
                                 instanceCursor.getLong(Cst.EVENT_INSTANCE_DELETION_BEGIN_INDEX)
                             )
-                            values.put(Events.STATUS, Events.STATUS_CANCELED)
+                            values.put(CalendarContract.Events.STATUS, CalendarContract.Events.STATUS_CANCELED)
+
+                            // Update the specific instance with its exception status
+                            val exceptionUri = ContentUris.withAppendedId(
+                                CalendarContract.Events.CONTENT_EXCEPTION_URI,
+                                foundEventID
+                            )
+                            contentResolver?.insert(exceptionUri, values)
+                            break  // We found the matching event instance, exit the loop
                         }
                     }
 
-                    val deleteSucceeded = contentResolver?.insert(exceptionUriWithId, values)
                     instanceCursor.close()
-                    finishWithSuccess(deleteSucceeded != null, pendingChannelResult)
+                    finishWithSuccess(values.size() > 0, pendingChannelResult)
                 } else { // This and following instances
-                    val eventsUriWithId =
-                        ContentUris.withAppendedId(Events.CONTENT_URI, eventIdNumber)
                     val values = ContentValues()
                     val instanceCursor = CalendarContract.Instances.query(
                         contentResolver,
@@ -802,16 +859,14 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
                     )
 
                     while (instanceCursor.moveToNext()) {
-                        val foundEventID =
-                            instanceCursor.getLong(Cst.EVENT_INSTANCE_DELETION_ID_INDEX)
+                        val foundEventID = instanceCursor.getLong(Cst.EVENT_INSTANCE_DELETION_ID_INDEX)
 
-                        if (eventIdNumber == foundEventID) {
+                        if (eventId?.toLongOrNull() == foundEventID || externalEventId != null) {
                             val newRule =
                                 Rrule(instanceCursor.getString(Cst.EVENT_INSTANCE_DELETION_RRULE_INDEX))
-                            val lastDate =
-                                instanceCursor.getLong(Cst.EVENT_INSTANCE_DELETION_LAST_DATE_INDEX)
+                            val lastDate = instanceCursor.getLong(Cst.EVENT_INSTANCE_DELETION_LAST_DATE_INDEX)
 
-                            if (lastDate > 0 && newRule.count != null && newRule.count > 0) { // Update occurrence rule
+                            if (lastDate > 0 && newRule.count != null && newRule.count > 0) {
                                 val cursor = CalendarContract.Instances.query(
                                     contentResolver,
                                     Cst.EVENT_INSTANCE_DELETION,
@@ -819,12 +874,12 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
                                     lastDate
                                 )
                                 while (cursor.moveToNext()) {
-                                    if (eventIdNumber == cursor.getLong(Cst.EVENT_INSTANCE_DELETION_ID_INDEX)) {
+                                    if (eventId?.toLongOrNull() == cursor.getLong(Cst.EVENT_INSTANCE_DELETION_ID_INDEX) || externalEventId != null) {
                                         newRule.count--
                                     }
                                 }
                                 cursor.close()
-                            } else { // Indefinite and specified date rule
+                            } else {
                                 val cursor = CalendarContract.Instances.query(
                                     contentResolver,
                                     Cst.EVENT_INSTANCE_DELETION,
@@ -834,7 +889,7 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
                                 var lastRecurrenceDate: Long? = null
 
                                 while (cursor.moveToNext()) {
-                                    if (eventIdNumber == cursor.getLong(Cst.EVENT_INSTANCE_DELETION_ID_INDEX)) {
+                                    if (eventId?.toLongOrNull() == cursor.getLong(Cst.EVENT_INSTANCE_DELETION_ID_INDEX) || externalEventId != null) {
                                         lastRecurrenceDate =
                                             cursor.getLong(Cst.EVENT_INSTANCE_DELETION_END_INDEX)
                                     }
@@ -848,8 +903,8 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
                                 cursor.close()
                             }
 
-                            values.put(Events.RRULE, newRule.toString())
-                            contentResolver?.update(eventsUriWithId, values, null, null)
+                            values.put(CalendarContract.Events.RRULE, newRule.toString())
+                            contentResolver?.update(CalendarContract.Events.CONTENT_URI, values, eventSelection, selectionArgs)
                             finishWithSuccess(true, pendingChannelResult)
                         }
                     }
@@ -863,6 +918,7 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
                 calendarId
             )
             parameters.eventId = eventId
+            parameters.externalEventId = externalEventId
             requestPermissions(parameters)
         }
     }

@@ -23,7 +23,7 @@ class Constants {
             CalendarContract.Calendars.OWNER_ACCOUNT,                 // 4
             CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL,         // 5
             CalendarContract.Calendars.CALENDAR_COLOR,                // 6
-            CalendarContract.Calendars.IS_PRIMARY                     // 7
+            CalendarContract.Calendars.IS_PRIMARY,                    // 7
             CalendarContract.Calendars._SYNC_ID,                      // 8
         )
 
@@ -35,8 +35,8 @@ class Constants {
             CalendarContract.Calendars.CALENDAR_DISPLAY_NAME,         // 3
             CalendarContract.Calendars.OWNER_ACCOUNT,                 // 4
             CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL,         // 5
-            CalendarContract.Calendars.CALENDAR_COLOR                 // 6
-            null,                                                     // 7
+            CalendarContract.Calendars.CALENDAR_COLOR,                // 6
+            "",                                                       // 7
             CalendarContract.Calendars._SYNC_ID                       // 8
         )
 
@@ -58,24 +58,24 @@ class Constants {
         const val EVENT_PROJECTION_SYNC_ID_INDEX: Int = 17
 
         val EVENT_PROJECTION: Array<String> = arrayOf(
-                CalendarContract.Instances.EVENT_ID,
-                CalendarContract.Events.TITLE,
-                CalendarContract.Events.DESCRIPTION,
-                CalendarContract.Instances.BEGIN,
-                CalendarContract.Instances.END,
-                CalendarContract.Instances.DURATION,
-                CalendarContract.Events.RDATE,
-                CalendarContract.Events.RRULE,
-                CalendarContract.Events.ALL_DAY,
-                CalendarContract.Events.EVENT_LOCATION,
-                CalendarContract.Events.CUSTOM_APP_URI,
-                CalendarContract.Events.EVENT_TIMEZONE,
-                CalendarContract.Events.EVENT_END_TIMEZONE,
-                CalendarContract.Events.AVAILABILITY,
-                CalendarContract.Events.STATUS,
-                CalendarContract.Events.EVENT_COLOR,
-                CalendarContract.Events.EVENT_COLOR_KEY,
-                CalendarContract.Events._SYNC_ID
+            CalendarContract.Instances.EVENT_ID,
+            CalendarContract.Events.TITLE,
+            CalendarContract.Events.DESCRIPTION,
+            CalendarContract.Instances.BEGIN,
+            CalendarContract.Instances.END,
+            CalendarContract.Instances.DURATION,
+            CalendarContract.Events.RDATE,
+            CalendarContract.Events.RRULE,
+            CalendarContract.Events.ALL_DAY,
+            CalendarContract.Events.EVENT_LOCATION,
+            CalendarContract.Events.CUSTOM_APP_URI,
+            CalendarContract.Events.EVENT_TIMEZONE,
+            CalendarContract.Events.EVENT_END_TIMEZONE,
+            CalendarContract.Events.AVAILABILITY,
+            CalendarContract.Events.STATUS,
+            CalendarContract.Events.EVENT_COLOR,
+            CalendarContract.Events.EVENT_COLOR_KEY,
+            CalendarContract.Events._SYNC_ID
         )
 
         const val EVENT_INSTANCE_DELETION_ID_INDEX: Int = 0
@@ -83,13 +83,15 @@ class Constants {
         const val EVENT_INSTANCE_DELETION_LAST_DATE_INDEX: Int = 2
         const val EVENT_INSTANCE_DELETION_BEGIN_INDEX: Int = 3
         const val EVENT_INSTANCE_DELETION_END_INDEX: Int = 4
+        const val EVENT_INSTANCE_DELETION_SYNC_ID_INDEX: Int = 5
 
         val EVENT_INSTANCE_DELETION: Array<String> = arrayOf(
             CalendarContract.Instances.EVENT_ID,
             CalendarContract.Events.RRULE,
             CalendarContract.Events.LAST_DATE,
             CalendarContract.Instances.BEGIN,
-            CalendarContract.Instances.END
+            CalendarContract.Instances.END,
+            CalendarContract.Events._SYNC_ID,
         )
 
         const val ATTENDEE_ID_INDEX: Int = 0
