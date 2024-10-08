@@ -41,7 +41,9 @@ import org.dmfs.rfc5545.recur.Freq as RruleFreq
 import org.dmfs.rfc5545.recur.RecurrenceRule as Rrule
 import android.provider.CalendarContract.Colors
 import androidx.collection.SparseArrayCompat
+import kotlin.io.use
 import kotlin.text.toLong
+import kotlin.text.toLongOrNull
 
 private const val RETRIEVE_CALENDARS_REQUEST_CODE = 0
 private const val RETRIEVE_EVENTS_REQUEST_CODE = RETRIEVE_CALENDARS_REQUEST_CODE + 1
@@ -487,36 +489,24 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
 
             val job: Job
             var eventId: Long? = event.eventId?.toLongOrNull()
-            var externalEventId = event.externalEventId;
+            var externalEventId = event.externalEventId
 
+            // Find event by externalEventId if eventId is null
             if (eventId == null && externalEventId != null) {
-                // Try to find event by externalEventId (_SYNC_ID)
-                val projection = arrayOf(CalendarContract.Events._ID)
-                val cursor = contentResolver?.query(
-                    CalendarContract.Events.CONTENT_URI,
-                    projection,
-                    "${CalendarContract.Events._SYNC_ID} = ?",
-                    arrayOf(externalEventId),
-                    null
-                )
-
-                if (cursor != null && cursor.moveToFirst()) {
-                    eventId = cursor.getLong(cursor.getColumnIndex(CalendarContract.Events._ID))
-                }
-                cursor?.close()
+                eventId = findEventIdByExternalId(contentResolver, externalEventId)
             }
 
-            if (eventId == null) {
+            job = if (eventId == null) {
                 // Insert a new event since no eventId or externalEventId exists
                 val uri = contentResolver?.insert(Events.CONTENT_URI, values)
-                eventId = java.lang.Long.parseLong(uri?.lastPathSegment!!)
-                job = GlobalScope.launch(Dispatchers.IO + exceptionHandler) {
-                    insertAttendees(event.attendees, eventId, contentResolver)
-                    insertReminders(event.reminders, eventId, contentResolver)
+                eventId = uri?.lastPathSegment?.toLongOrNull()
+                GlobalScope.launch(Dispatchers.IO + exceptionHandler) {
+                    insertAttendees(event.attendees, eventId!!, contentResolver)
+                    insertReminders(event.reminders, eventId!!, contentResolver)
                 }
             } else {
                 // Update existing event
-                job = GlobalScope.launch(Dispatchers.IO + exceptionHandler) {
+                GlobalScope.launch(Dispatchers.IO + exceptionHandler) {
                     contentResolver?.update(
                         ContentUris.withAppendedId(Events.CONTENT_URI, eventId),
                         values,
@@ -558,7 +548,7 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
             job.invokeOnCompletion { cause ->
                 if (cause == null) {
                     uiThreadHandler.post {
-                        finishWithSuccess(eventId.toString(), pendingChannelResult)
+                        finishWithSuccess(eventId?.toString(), pendingChannelResult)
                     }
                 }
             }
@@ -571,6 +561,22 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
             parameters.event = event
             requestPermissions(parameters)
         }
+    }
+
+    private fun findEventIdByExternalId(contentResolver: ContentResolver?, externalEventId: String): Long? {
+        val projection = arrayOf(CalendarContract.Events._ID)
+        contentResolver?.query(
+            CalendarContract.Events.CONTENT_URI,
+            projection,
+            "${CalendarContract.Events._SYNC_ID} = ?",
+            arrayOf(externalEventId),
+            null
+        )?.use { cursor -> // Use 'use' for automatic cursor closing
+            if (cursor.moveToFirst()) {
+                return cursor.getLong(cursor.getColumnIndex(CalendarContract.Events._ID))
+            }
+        }
+        return null
     }
 
     private fun deleteExistingReminders(contentResolver: ContentResolver?, eventId: Long) {
