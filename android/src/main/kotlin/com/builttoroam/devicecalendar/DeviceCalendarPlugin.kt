@@ -38,6 +38,7 @@ private const val END_DATE_ARGUMENT = "endDate"
 private const val EVENT_IDS_ARGUMENT = "eventIds"
 private const val EVENT_ID_ARGUMENT = "eventId"
 private const val EXTERNAL_EVENT_ID_ARGUMENT = "externalEventId"
+private const val GUID_ARGUMENT = "guid"
 private const val EVENT_TITLE_ARGUMENT = "eventTitle"
 private const val EVENT_LOCATION_ARGUMENT = "eventLocation"
 private const val EVENT_URL_ARGUMENT = "eventURL"
@@ -222,6 +223,7 @@ class DeviceCalendarPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         event.calendarId = calendarId
         event.eventId = call.argument<String>(EVENT_ID_ARGUMENT)
         event.externalEventId = call.argument<String>(EXTERNAL_EVENT_ID_ARGUMENT)
+        event.guid = call.argument<String>(GUID_ARGUMENT)
         event.eventDescription = call.argument<String>(EVENT_DESCRIPTION_ARGUMENT)
         event.eventAllDay = call.argument<Boolean>(EVENT_ALL_DAY_ARGUMENT) ?: false
         event.eventStartDate = call.argument<Long>(EVENT_START_DATE_ARGUMENT)!!

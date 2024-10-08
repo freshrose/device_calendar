@@ -53,6 +53,7 @@ private const val CREATE_OR_UPDATE_EVENT_REQUEST_CODE = RETRIEVE_CALENDAR_REQUES
 private const val DELETE_EVENT_REQUEST_CODE = CREATE_OR_UPDATE_EVENT_REQUEST_CODE + 1
 private const val REQUEST_PERMISSIONS_REQUEST_CODE = DELETE_EVENT_REQUEST_CODE + 1
 private const val DELETE_CALENDAR_REQUEST_CODE = REQUEST_PERMISSIONS_REQUEST_CODE + 1
+private const val DEBUG_LOG_TAG = "DeviceCalendar"
 
 class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
     PluginRegistry.RequestPermissionsResultListener {
@@ -490,12 +491,15 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
 
             val job: Job
             var eventId: Long? = event.eventId?.toLongOrNull()
-            var externalEventId = event.externalEventId
+            var externalEventId = event.guid
 
             // Find event by externalEventId if eventId is null
             if (eventId == null && externalEventId != null) {
                 eventId = findEventIdByExternalId(contentResolver, externalEventId)
             }
+
+            Log.d(DEBUG_LOG_TAG, "externalEventId: $externalEventId")
+            Log.d(DEBUG_LOG_TAG, "eventId: $eventId")
 
             job = if (eventId == null) {
                 val uri = contentResolver?.insert(Events.CONTENT_URI, values)
@@ -546,6 +550,9 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
                     }
                 }
             }
+
+            Log.d(DEBUG_LOG_TAG, "eventId: ${eventId?.toString()}")
+
             job.invokeOnCompletion { cause ->
                 if (cause == null) {
                     uiThreadHandler.post {
@@ -998,7 +1005,7 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
 
         // Get column names for the cursor
         val columnNames = cursor.columnNames
-        Log.d("CursorLog", "Cursor has ${cursor.count} rows and ${columnNames.size} columns")
+        Log.d(DEBUG_LOG_TAG, "Cursor has ${cursor.count} rows and ${columnNames.size} columns")
 
         val rowValues = StringBuilder()
         for (i in columnNames.indices) {
@@ -1007,7 +1014,7 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
             rowValues.append("${columnNames[i]}: $columnValue, ")
         }
         // Log the current row values
-        Log.d("CursorLog", "Row ${cursor.position}: $rowValues")
+        Log.d(DEBUG_LOG_TAG, "Row ${cursor.position}: $rowValues")
 
         val eventId = cursor.getLong(Cst.EVENT_PROJECTION_ID_INDEX)
         val title = cursor.getString(Cst.EVENT_PROJECTION_TITLE_INDEX)
@@ -1031,6 +1038,7 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
         event.eventTitle = title ?: "New Event"
         event.eventId = eventId.toString()
         event.externalEventId = externalEventId
+        event.guid = guid
         event.calendarId = calendarId
         event.eventDescription = description
         event.eventStartDate = begin
@@ -1045,7 +1053,6 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
         event.eventStatus = eventStatus
         event.eventColor = if (eventColor == 0) null else eventColor
         event.eventColorKey = if (eventColorKey == 0) null else eventColorKey
-        event.guid = guid
 
         return event
     }
