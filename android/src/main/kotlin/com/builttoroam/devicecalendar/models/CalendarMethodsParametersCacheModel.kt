@@ -11,6 +11,7 @@ class CalendarMethodsParametersCacheModel(
     var calendarEventsIds: List<String> = listOf(),
     var eventId: String? = null,
     var externalEventId: String? = null,
+    var guid: String? = null,
     var event: Event? = null
 ) {
     var ownCacheKey: Int? = null

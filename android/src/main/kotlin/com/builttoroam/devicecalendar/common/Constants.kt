@@ -37,7 +37,7 @@ class Constants {
             CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL,         // 5
             CalendarContract.Calendars.CALENDAR_COLOR,                // 6
             "",                                                       // 7
-            CalendarContract.Calendars._SYNC_ID                       // 8
+            CalendarContract.Calendars._SYNC_ID,                      // 8
         )
 
         const val EVENT_PROJECTION_ID_INDEX: Int = 0
@@ -56,6 +56,7 @@ class Constants {
         const val EVENT_PROJECTION_EVENT_COLOR_INDEX: Int = 15
         const val EVENT_PROJECTION_EVENT_COLOR_KEY_INDEX: Int = 16
         const val EVENT_PROJECTION_SYNC_ID_INDEX: Int = 17
+        const val EVENT_PROJECTION_UID_2445_INDEX: Int = 18
 
         val EVENT_PROJECTION: Array<String> = arrayOf(
             CalendarContract.Instances.EVENT_ID,
@@ -75,7 +76,8 @@ class Constants {
             CalendarContract.Events.STATUS,
             CalendarContract.Events.EVENT_COLOR,
             CalendarContract.Events.EVENT_COLOR_KEY,
-            CalendarContract.Events._SYNC_ID
+            CalendarContract.Events._SYNC_ID,
+            CalendarContract.Events.UID_2445,
         )
 
         const val EVENT_INSTANCE_DELETION_ID_INDEX: Int = 0
@@ -84,6 +86,7 @@ class Constants {
         const val EVENT_INSTANCE_DELETION_BEGIN_INDEX: Int = 3
         const val EVENT_INSTANCE_DELETION_END_INDEX: Int = 4
         const val EVENT_INSTANCE_DELETION_SYNC_ID_INDEX: Int = 5
+        const val EVENT_INSTANCE_DELETION_UID_2445_INDEX: Int = 6
 
         val EVENT_INSTANCE_DELETION: Array<String> = arrayOf(
             CalendarContract.Instances.EVENT_ID,
@@ -92,6 +95,7 @@ class Constants {
             CalendarContract.Instances.BEGIN,
             CalendarContract.Instances.END,
             CalendarContract.Events._SYNC_ID,
+            CalendarContract.Events.UID_2445,
         )
 
         const val ATTENDEE_ID_INDEX: Int = 0

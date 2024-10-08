@@ -44,6 +44,7 @@ import androidx.collection.SparseArrayCompat
 import kotlin.io.use
 import kotlin.text.toLong
 import kotlin.text.toLongOrNull
+import android.util.Log
 
 private const val RETRIEVE_CALENDARS_REQUEST_CODE = 0
 private const val RETRIEVE_EVENTS_REQUEST_CODE = RETRIEVE_CALENDARS_REQUEST_CODE + 1
@@ -497,12 +498,12 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
             }
 
             job = if (eventId == null) {
-                // Insert a new event since no eventId or externalEventId exists
                 val uri = contentResolver?.insert(Events.CONTENT_URI, values)
-                eventId = uri?.lastPathSegment?.toLongOrNull()
+                // get the event ID that is the last element in the Uri
+                eventId = java.lang.Long.parseLong(uri?.lastPathSegment!!)
                 GlobalScope.launch(Dispatchers.IO + exceptionHandler) {
-                    insertAttendees(event.attendees, eventId!!, contentResolver)
-                    insertReminders(event.reminders, eventId!!, contentResolver)
+                    insertAttendees(event.attendees, eventId, contentResolver)
+                    insertReminders(event.reminders, eventId, contentResolver)
                 }
             } else {
                 // Update existing event
@@ -568,7 +569,7 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
         contentResolver?.query(
             CalendarContract.Events.CONTENT_URI,
             projection,
-            "${CalendarContract.Events._SYNC_ID} = ?",
+            "${CalendarContract.Events.UID_2445} = ?",
             arrayOf(externalEventId),
             null
         )?.use { cursor -> // Use 'use' for automatic cursor closing
@@ -661,6 +662,7 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
         values.put(Events.DURATION, duration)
         values.put(Events.EVENT_COLOR_KEY, event.eventColorKey)
         values.put(Events.EVENT_COLOR, event.eventColor)
+        values.put(Events.UID_2445, event.guid)
         return values
     }
 
@@ -799,7 +801,7 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
 
             if (externalEventId != null) {
                 // Use externalEventId for deletion
-                eventSelection = "${CalendarContract.Events._SYNC_ID} = ?"
+                eventSelection = "${CalendarContract.Events.UID_2445} = ?"
                 selectionArgs = arrayOf(externalEventId)
             } else {
                 // Use eventId for deletion
@@ -829,7 +831,7 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
 
                         // Check if the event matches by `externalEventId` or `eventId`
                         val isMatch = if (externalEventId != null) {
-                            val eventSyncId = instanceCursor.getString(Cst.EVENT_INSTANCE_DELETION_SYNC_ID_INDEX)
+                            val eventSyncId = instanceCursor.getString(Cst.EVENT_INSTANCE_DELETION_UID_2445_INDEX)
                             externalEventId == eventSyncId
                         } else {
                             eventId?.toLong() == foundEventID
@@ -993,6 +995,20 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
         if (cursor == null) {
             return null
         }
+
+        // Get column names for the cursor
+        val columnNames = cursor.columnNames
+        Log.d("CursorLog", "Cursor has ${cursor.count} rows and ${columnNames.size} columns")
+
+        val rowValues = StringBuilder()
+        for (i in columnNames.indices) {
+            // Get value of each column in the current row
+            val columnValue = cursor.getString(i)  // Can change to getInt(), getLong(), etc., depending on data type
+            rowValues.append("${columnNames[i]}: $columnValue, ")
+        }
+        // Log the current row values
+        Log.d("CursorLog", "Row ${cursor.position}: $rowValues")
+
         val eventId = cursor.getLong(Cst.EVENT_PROJECTION_ID_INDEX)
         val title = cursor.getString(Cst.EVENT_PROJECTION_TITLE_INDEX)
         val description = cursor.getString(Cst.EVENT_PROJECTION_DESCRIPTION_INDEX)
@@ -1009,6 +1025,8 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
         val eventColor = cursor.getInt(Cst.EVENT_PROJECTION_EVENT_COLOR_INDEX)
         val eventColorKey = cursor.getInt(Cst.EVENT_PROJECTION_EVENT_COLOR_KEY_INDEX)
         val externalEventId = cursor.getString(Cst.EVENT_PROJECTION_SYNC_ID_INDEX)
+        val guid = cursor.getString(Cst.EVENT_PROJECTION_UID_2445_INDEX)
+
         val event = Event()
         event.eventTitle = title ?: "New Event"
         event.eventId = eventId.toString()
@@ -1027,6 +1045,7 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
         event.eventStatus = eventStatus
         event.eventColor = if (eventColor == 0) null else eventColor
         event.eventColorKey = if (eventColorKey == 0) null else eventColorKey
+        event.guid = guid
 
         return event
     }
@@ -1141,7 +1160,7 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
             Events.CAL_ACCESS_ROOT,
             Events.CAL_ACCESS_OWNER,
             Events.CAL_ACCESS_EDITOR
-            -> false
+                -> false
             else -> true
         }
     }

@@ -14,6 +14,9 @@ class Event {
   /// Read-only. The calendar item’s external identifier as provided by the calendar server.
   String? externalEventId;
 
+  /// The unique identifier for this event.
+  String? guid;
+
   /// Read-only. The identifier of the calendar that this event is associated with
   String? calendarId;
 
@@ -72,6 +75,7 @@ class Event {
   Event(this.calendarId,
       {this.eventId,
       this.externalEventId,
+      this.guid,
       this.title,
       this.start,
       this.end,
@@ -119,6 +123,7 @@ class Event {
 
     eventId = json['eventId'];
     externalEventId = json['externalEventId'];
+    guid = json['guid'];
     calendarId = json['calendarId'];
     title = json['eventTitle'];
     description = json['eventDescription'];
@@ -239,6 +244,7 @@ class Event {
     data['calendarId'] = calendarId;
     data['eventId'] = eventId;
     data['externalEventId'] = externalEventId;
+    data['guid'] = guid;
     data['eventTitle'] = title;
     data['eventDescription'] = description;
     data['eventStartDate'] = start?.millisecondsSinceEpoch ??
