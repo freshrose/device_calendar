@@ -53,7 +53,6 @@ private const val CREATE_OR_UPDATE_EVENT_REQUEST_CODE = RETRIEVE_CALENDAR_REQUES
 private const val DELETE_EVENT_REQUEST_CODE = CREATE_OR_UPDATE_EVENT_REQUEST_CODE + 1
 private const val REQUEST_PERMISSIONS_REQUEST_CODE = DELETE_EVENT_REQUEST_CODE + 1
 private const val DELETE_CALENDAR_REQUEST_CODE = REQUEST_PERMISSIONS_REQUEST_CODE + 1
-private const val DEBUG_LOG_TAG = "DeviceCalendar"
 
 class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
     PluginRegistry.RequestPermissionsResultListener {
@@ -65,6 +64,8 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
     private var _gson: Gson? = null
 
     private val uiThreadHandler = Handler(Looper.getMainLooper())
+
+    private lateinit var _calendarObserver: CalendarObserver
 
     init {
         val gsonBuilder = GsonBuilder()
@@ -143,6 +144,41 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
             return true
         } finally {
             _cachedParametersMap.remove(cachedValues.calendarDelegateMethodCode)
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun initializeListener(methodChannel: MethodChannel, pendingChannelResult: MethodChannel.Result) {
+        Log.d(DEBUG_LOG_TAG, "initializeListener")
+        if (arePermissionsGranted()) {
+            startObservingCalendar(methodChannel);
+            finishWithSuccess(true, pendingChannelResult)
+        } else {
+            Log.d(DEBUG_LOG_TAG, "Request permissions")
+            val parameters = CalendarMethodsParametersCacheModel(
+                pendingChannelResult,
+                REQUEST_PERMISSIONS_REQUEST_CODE
+            )
+            requestPermissions(parameters)
+        }
+    }
+
+    fun stopCalendarListener(pendingChannelResult: MethodChannel.Result) {
+        stopObservingCalendar();
+        finishWithSuccess(true, pendingChannelResult)
+    }
+
+    private fun startObservingCalendar(methodChannel: MethodChannel) {
+        Log.d(DEBUG_LOG_TAG, "startObservingCalendar")
+        val handler: Handler = Handler()
+        val calendarObserver: CalendarObserver = CalendarObserver(handler, methodChannel)
+        _context?.contentResolver?.registerContentObserver(Uri.parse("content://com.android.calendar/events"), true, calendarObserver)
+    }
+
+    private fun stopObservingCalendar() {
+        Log.d(DEBUG_LOG_TAG, "stopCalendarListener")
+        if (_calendarObserver != null) {
+            _context?.contentResolver?.unregisterContentObserver(_calendarObserver)
         }
     }
 

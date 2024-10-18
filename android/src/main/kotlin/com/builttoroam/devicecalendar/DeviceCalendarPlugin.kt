@@ -15,8 +15,12 @@ import org.dmfs.rfc5545.recur.Freq
 
 const val CHANNEL_NAME = "plugins.builttoroam.com/device_calendar"
 
+const val DEBUG_LOG_TAG = "DeviceCalendar"
+
 // Methods
 private const val REQUEST_PERMISSIONS_METHOD = "requestPermissions"
+private const val INITIALIZE_LISTENER_METHOD = "initializeListener"
+private const val STOP_CALENDAR_LISTENER_METHOD = "stopCalendarListener"
 private const val HAS_PERMISSIONS_METHOD = "hasPermissions"
 private const val RETRIEVE_CALENDARS_METHOD = "retrieveCalendars"
 private const val RETRIEVE_EVENTS_METHOD = "retrieveEvents"
@@ -120,6 +124,12 @@ class DeviceCalendarPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
+            INITIALIZE_LISTENER_METHOD -> {
+                _calendarDelegate.initializeListener(channel, result)
+            }
+            STOP_CALENDAR_LISTENER_METHOD -> {
+                _calendarDelegate.stopCalendarListener(result)
+            }
             REQUEST_PERMISSIONS_METHOD -> {
                 _calendarDelegate.requestPermissions(result)
             }

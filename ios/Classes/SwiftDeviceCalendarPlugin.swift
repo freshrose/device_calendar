@@ -117,6 +117,8 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
     let deleteEventMethod = "deleteEvent"
     let deleteEventInstanceMethod = "deleteEventInstance"
     let showEventModalMethod = "showiOSEventModal"
+    let initializeListenerMethod = "initializeListener"
+    let stopCalendarListenerMethod = "stopCalendarListener"
     let updateCalendarColor = "updateCalendarColor"
     let calendarIdArgument = "calendarId"
     let startDateArgument = "startDate"
@@ -160,15 +162,20 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
     let validFrequencyTypes = [EKRecurrenceFrequency.daily, EKRecurrenceFrequency.weekly, EKRecurrenceFrequency.monthly, EKRecurrenceFrequency.yearly]
 
     var flutterResult : FlutterResult?
+    static var methodChannel: FlutterMethodChannel?
 
     public static func register(with registrar: FlutterPluginRegistrar) {
-        let channel = FlutterMethodChannel(name: channelName, binaryMessenger: registrar.messenger())
+        methodChannel = FlutterMethodChannel(name: channelName, binaryMessenger: registrar.messenger())
         let instance = SwiftDeviceCalendarPlugin()
-        registrar.addMethodCallDelegate(instance, channel: channel)
+        registrar.addMethodCallDelegate(instance, channel: methodChannel!)
     }
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
+        case initializeListenerMethod:
+            initializeListener(result)
+        case stopCalendarListenerMethod:
+            stopListeningForCalendarChanges(result)
         case requestPermissionsMethod:
             requestPermissions(result)
         case hasPermissionsMethod:
@@ -197,6 +204,30 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
         default:
             result(FlutterMethodNotImplemented)
         }
+    }
+
+    private func initializeListener(_ result: FlutterResult) {
+        let hasPermissions = self.hasEventPermissions()
+        if hasPermissions {
+            self.startListeningForCalendarChanges()
+        }
+        result(hasPermissions)
+    }
+
+    private func startListeningForCalendarChanges() {
+        NotificationCenter.default.addObserver(self, selector: #selector(self.calendarChanged), name: NSNotification.Name.EKEventStoreChanged, object: self.eventStore)
+    }
+
+    private func stopListeningForCalendarChanges() {
+      NotificationCenter.default.removeObserver(self, name: NSNotification.Name.EKEventStoreChanged, object: nil)
+    }
+
+    deinit {
+        stopListeningForCalendarChanges()
+    }
+
+    @objc private func calendarChanged(_ notification: NSNotification) {
+        SwiftDeviceCalendarPlugin.methodChannel?.invokeMethod("onCalendarChanged", arguments: nil)
     }
 
     private func refreshSources(_ result: FlutterResult) {

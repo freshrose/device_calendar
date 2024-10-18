@@ -28,6 +28,15 @@ class DeviceCalendarPlugin {
   @visibleForTesting
   DeviceCalendarPlugin.private();
 
+  // Initialize calendar
+  //
+  // Use this method to start listening to calendar events
+  Future<Result<bool>> initializeListener() async {
+    return _invokeChannelMethod(
+      ChannelConstants.methodNameInitializeListener,
+    );
+  }
+
   /// Refreshes sources on iOS
   ///
   /// Use this method to pull new data from remote sources if the local data is out of date.
