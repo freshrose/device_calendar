@@ -268,7 +268,7 @@ class _EventItemState extends State<EventItem> {
                                         ._deviceCalendarPlugin
                                         .deleteEvent(
                                             widget._calendarEvent?.calendarId,
-                                            widget._calendarEvent?.eventId);
+                                            eventId: widget._calendarEvent?.eventId);
                                     widget._onDeleteFinished(
                                         deleteResult.isSuccess &&
                                             deleteResult.data != null);

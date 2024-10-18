@@ -81,7 +81,7 @@ class _RecurringEventDialogState extends State<RecurringEventDialog> {
             Navigator.of(context).pop(true);
             if (_onLoadingStarted != null) _onLoadingStarted!();
             final deleteResult = await _deviceCalendarPlugin.deleteEvent(
-                _calendarEvent.calendarId, _calendarEvent.eventId);
+                _calendarEvent.calendarId, eventId: _calendarEvent.eventId);
             if (_onDeleteFinished != null) {
               _onDeleteFinished!(
                   deleteResult.isSuccess && deleteResult.data != null);

@@ -965,7 +965,7 @@ class _CalendarEventPageState extends State<CalendarEventPage> {
                       bool? result = true;
                       if (!(_rrule != null)) {
                         await _deviceCalendarPlugin.deleteEvent(
-                            _calendar.id, _event?.eventId);
+                            _calendar.id, eventId: _event?.eventId);
                       } else {
                         result = await showDialog<bool>(
                             context: context,

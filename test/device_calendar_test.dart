@@ -77,7 +77,7 @@ void main() {
     const String? calendarId = null;
     const eventId = 'fakeEventId';
 
-    final result = await deviceCalendarPlugin.deleteEvent(calendarId, eventId);
+    final result = await deviceCalendarPlugin.deleteEvent(calendarId, eventId: eventId);
     expect(result.isSuccess, false);
     expect(result.errors.length, greaterThan(0));
     expect(result.errors[0].errorCode, equals(ErrorCodes.invalidArguments));
@@ -87,7 +87,7 @@ void main() {
     const calendarId = 'fakeCalendarId';
     const String? eventId = null;
 
-    final result = await deviceCalendarPlugin.deleteEvent(calendarId, eventId);
+    final result = await deviceCalendarPlugin.deleteEvent(calendarId, eventId: eventId);
     expect(result.isSuccess, false);
     expect(result.errors.length, greaterThan(0));
     expect(result.errors[0].errorCode, equals(ErrorCodes.invalidArguments));
@@ -97,7 +97,7 @@ void main() {
     const calendarId = 'fakeCalendarId';
     const eventId = 'fakeEventId';
 
-    await deviceCalendarPlugin.deleteEvent(calendarId, eventId);
+    await deviceCalendarPlugin.deleteEvent(calendarId, eventId: eventId);
     expect(log, <Matcher>[
       isMethodCall('deleteEvent', arguments: <String, dynamic>{
         'calendarId': calendarId,
