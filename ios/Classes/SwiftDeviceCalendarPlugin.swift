@@ -175,7 +175,7 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
         case initializeListenerMethod:
             initializeListener(result)
         case stopCalendarListenerMethod:
-            stopListeningForCalendarChanges(result)
+            stopCalendarListener(result)
         case requestPermissionsMethod:
             requestPermissions(result)
         case hasPermissionsMethod:
@@ -212,6 +212,11 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
             self.startListeningForCalendarChanges()
         }
         result(hasPermissions)
+    }
+
+    private func stopCalendarListener(_ result: FlutterResult) {
+        stopListeningForCalendarChanges()
+        result(true)
     }
 
     private func startListeningForCalendarChanges() {
