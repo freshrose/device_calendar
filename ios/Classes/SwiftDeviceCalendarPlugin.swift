@@ -52,6 +52,7 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
         let reminders: [Reminder]
         let availability: Availability?
         let eventStatus: EventStatus?
+        let eventLastModified: Int64
     }
 
     struct RecurrenceRule: Codable {
@@ -509,7 +510,8 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
             organizer: convertEkParticipantToAttendee(ekParticipant: ekEvent.organizer),
             reminders: reminders,
             availability: convertEkEventAvailability(ekEventAvailability: ekEvent.availability),
-            eventStatus: convertEkEventStatus(ekEventStatus: ekEvent.status)
+            eventStatus: convertEkEventStatus(ekEventStatus: ekEvent.status),
+            eventLastModified: Int64(ekEvent.lastModifiedDate?.millisecondsSinceEpoch ?? 0)
         )
 
         return event

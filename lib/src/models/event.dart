@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:collection/collection.dart';
+import 'package:crypto/crypto.dart';
 
 import '../../device_calendar.dart';
 import '../common/error_messages.dart';
@@ -60,6 +62,9 @@ class Event {
 
   /// Read-only. Android exclusive. Updatable only using [Event.updateEventColor] with color from [DeviceCalendarPlugin.retrieveEventColors]
   int? colorKey;
+
+  /// Read-only. The date and time that this event was last modified
+  TZDateTime? lastModified;
 
   ///Note for development:
   ///
@@ -128,6 +133,9 @@ class Event {
     description = json['eventDescription'];
     color = json['eventColor'];
     colorKey = json['eventColorKey'];
+
+    var lastModifiedTimestamp = json['eventLastModified'];
+    lastModified = lastModifiedTimestamp != null ? TZDateTime.fromMillisecondsSinceEpoch(UTC, lastModifiedTimestamp) : null;
 
     startTimestamp = json['eventStartDate'];
     startLocationName = json['eventStartTimeZone'];
@@ -259,6 +267,7 @@ class Event {
     data['eventStatus'] = status?.enumToString;
     data['eventColor'] = color;
     data['eventColorKey'] = colorKey;
+    data['eventLastModified'] = lastModified;
 
     if (attendees != null) {
       data['attendees'] = attendees?.map((a) => a?.toJson()).toList();
@@ -336,5 +345,30 @@ class Event {
   void updateEventColor(EventColor? eventColor) {
     color = eventColor?.color;
     colorKey = eventColor?.colorKey;
+  }
+
+  String getHashCode(Event event) {
+    var data = [
+      event.eventId ?? '',
+      event.externalEventId ?? '',
+      event.guid ?? '',
+      event.title ?? '',
+      event.description ?? '',
+      event.start?.millisecondsSinceEpoch.toString() ?? '',
+      event.end?.millisecondsSinceEpoch.toString() ?? '',
+      event.allDay?.toString() ?? 'false',
+      event.location ?? '',
+      event.url?.toString() ?? '',
+      event.attendees?.map((a) => a?.toJson().toString()).join(',') ?? '',
+      event.recurrenceRule?.toJson().toString() ?? '',
+      event.reminders?.map((r) => r.toJson().toString()).join(',') ?? '',
+      event.availability.enumToString,
+      event.status?.enumToString ?? '',
+      event.color?.toString() ?? '',
+      event.colorKey?.toString() ?? '',
+      event.lastModified?.millisecondsSinceEpoch.toString() ?? '',
+    ].join('|');
+
+    return sha1.convert(utf8.encode(data)).toString();
   }
 }
