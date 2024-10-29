@@ -112,6 +112,7 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
                         cachedValues.calendarEventsStartDate,
                         cachedValues.calendarEventsEndDate,
                         cachedValues.calendarEventsIds,
+                        cachedValues.calendarExternalEventsIds,
                         cachedValues.pendingChannelResult
                     )
                 }
@@ -402,9 +403,10 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
         startDate: Long?,
         endDate: Long?,
         eventIds: List<String>,
+        externalEventsIds: List<String>,
         pendingChannelResult: MethodChannel.Result
     ) {
-        if (startDate == null && endDate == null && eventIds.isEmpty()) {
+        if (startDate == null && endDate == null && eventIds.isEmpty() && externalEventsIds.isEmpty()) {
             finishWithError(
                 EC.INVALID_ARGUMENT,
                 ErrorMessages.RETRIEVE_EVENTS_ARGUMENTS_NOT_VALID_MESSAGE,
@@ -438,6 +440,9 @@ class CalendarDelegate(binding: ActivityPluginBinding?, context: Context) :
             var eventsSelectionQuery = "$eventsCalendarQuery AND $eventsNotDeletedQuery"
             if (eventIds.isNotEmpty()) {
                 eventsSelectionQuery += " AND ($eventsIdsQuery)"
+            }
+            if (externalEventsIds.isNotEmpty()) {
+                eventsSelectionQuery += " AND (${Events.UID_2445} IN (${externalEventsIds.joinToString()}))"
             }
             val eventsSortOrder = Events.DTSTART + " DESC"
 

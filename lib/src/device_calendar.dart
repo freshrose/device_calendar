@@ -102,7 +102,8 @@ class DeviceCalendarPlugin {
 
           _assertParameter(
             result,
-            !((retrieveEventsParams?.eventIds?.isEmpty ?? true) &&
+            !((retrieveEventsParams?.externalEventIds?.isEmpty ?? true) &&
+                (retrieveEventsParams?.eventIds?.isEmpty ?? true) &&
                 ((retrieveEventsParams?.startDate == null ||
                         retrieveEventsParams?.endDate == null) ||
                     (retrieveEventsParams?.startDate != null &&
@@ -122,6 +123,8 @@ class DeviceCalendarPlugin {
                   retrieveEventsParams?.endDate?.millisecondsSinceEpoch,
               ChannelConstants.parameterNameEventIds:
                   retrieveEventsParams?.eventIds,
+              ChannelConstants.parameterNameExternalEventIds:
+                  retrieveEventsParams?.externalEventIds,
             },
         /*evaluateResponse: (rawData) => UnmodifiableListView(
         json

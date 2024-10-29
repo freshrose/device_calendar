@@ -127,6 +127,7 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
     let eventIdArgument = "eventId"
     let externalEventIdArgument = "externalEventId"
     let eventIdsArgument = "eventIds"
+    let externalEventIdsArgument = "externalEventIds"
     let eventTitleArgument = "eventTitle"
     let eventDescriptionArgument = "eventDescription"
     let eventAllDayArgument = "eventAllDay"
@@ -401,6 +402,7 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
             let startDateMillisecondsSinceEpoch = arguments[startDateArgument] as? NSNumber
             let endDateDateMillisecondsSinceEpoch = arguments[endDateArgument] as? NSNumber
             let eventIdArgs = arguments[eventIdsArgument] as? [String]
+            let externalEventIdArgs = arguments[externalEventIdsArgument] as? [String]
             var events = [Event]()
             let specifiedStartEndDates = startDateMillisecondsSinceEpoch != nil && endDateDateMillisecondsSinceEpoch != nil
             if specifiedStartEndDates {
@@ -456,6 +458,17 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
 
                 self.encodeJsonAndFinish(codable: events, result: result)
                 return
+            }
+
+            for externalEventId in externalEventIdArgs! {
+                let matchingItems = self.eventStore.calendarItems(withExternalIdentifier: externalEventId)
+                let ekEvent = matchingItems.first as? EKEvent
+                if ekEvent == nil {
+                    continue
+                }
+
+                let event = createEventFromEkEvent(calendarId: calendarId, ekEvent: ekEvent!)
+                events.append(event)
             }
 
             for eventId in eventIds {

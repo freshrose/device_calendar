@@ -42,6 +42,7 @@ private const val END_DATE_ARGUMENT = "endDate"
 private const val EVENT_IDS_ARGUMENT = "eventIds"
 private const val EVENT_ID_ARGUMENT = "eventId"
 private const val EXTERNAL_EVENT_ID_ARGUMENT = "externalEventId"
+private const val EXTERNAL_EVENT_IDS_ARGUMENT = "externalEventIds"
 private const val GUID_ARGUMENT = "guid"
 private const val EVENT_TITLE_ARGUMENT = "eventTitle"
 private const val EVENT_LOCATION_ARGUMENT = "eventLocation"
@@ -144,7 +145,8 @@ class DeviceCalendarPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 val startDate = call.argument<Long>(START_DATE_ARGUMENT)
                 val endDate = call.argument<Long>(END_DATE_ARGUMENT)
                 val eventIds = call.argument<List<String>>(EVENT_IDS_ARGUMENT) ?: listOf()
-                _calendarDelegate.retrieveEvents(calendarId!!, startDate, endDate, eventIds, result)
+                val externalEventIds = call.argument<List<String>>(EXTERNAL_EVENT_IDS_ARGUMENT) ?: listOf()
+                _calendarDelegate.retrieveEvents(calendarId!!, startDate, endDate, eventIds, externalEventIds, result)
             }
             CREATE_OR_UPDATE_EVENT_METHOD -> {
                 val calendarId = call.argument<String>(CALENDAR_ID_ARGUMENT)

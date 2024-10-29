@@ -23,6 +23,7 @@ class ChannelConstants {
   static const String parameterNameEventId = 'eventId';
   static const String parameterNameExternalEventId = 'externalEventId';
   static const String parameterNameEventIds = 'eventIds';
+  static const String parameterNameExternalEventIds = 'externalEventIds';
   static const String parameterNameEventStartDate = 'eventStartDate';
   static const String parameterNameEventEndDate = 'eventEndDate';
   static const String parameterNameFollowingInstances = 'followingInstances';
