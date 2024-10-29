@@ -457,15 +457,6 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
                 return
             }
 
-            if specifiedStartEndDates {
-                events = events.filter({ (e) -> Bool in
-                    e.calendarId == calendarId && eventIds.contains(e.eventId)
-                })
-
-                self.encodeJsonAndFinish(codable: events, result: result)
-                return
-            }
-
             if externalEventIds != nil {
                 for externalEventId in externalEventIds {
                     let matchingItems = self.eventStore.calendarItems(withExternalIdentifier: externalEventId)
@@ -480,6 +471,16 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
             }
 
             if eventIds != nil {
+
+                if specifiedStartEndDates {
+                    events = events.filter({ (e) -> Bool in
+                        e.calendarId == calendarId && eventIds.contains(e.eventId)
+                    })
+
+                    self.encodeJsonAndFinish(codable: events, result: result)
+                    return
+                }
+
                 for eventId in eventIds {
                     let ekEvent = self.eventStore.event(withIdentifier: eventId)
                     if ekEvent == nil {
