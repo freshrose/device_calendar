@@ -397,13 +397,19 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
 
     private func retrieveEvents(_ call: FlutterMethodCall, _ result: @escaping FlutterResult) {
         checkPermissionsThenExecute(permissionsGrantedAction: {
-            let arguments = call.arguments as! Dictionary<String, AnyObject>
-            let calendarId = arguments[calendarIdArgument] as! String
+            guard let arguments = call.arguments as? [String: AnyObject],
+                  let calendarId = arguments[calendarIdArgument] as? String else {
+                result(FlutterError(code: "INVALID_ARGUMENTS", message: "Missing calendarId", details: nil))
+                return
+            }
+
             let startDateMillisecondsSinceEpoch = arguments[startDateArgument] as? NSNumber
             let endDateDateMillisecondsSinceEpoch = arguments[endDateArgument] as? NSNumber
-            let eventIdArgs = arguments[eventIdsArgument] as? [String]
-            let externalEventIdArgs = arguments[externalEventIdsArgument] as? [String]
+            let eventIds = arguments[eventIdsArgument] as? [String]
+            let externalEventIds = arguments[externalEventIdsArgument] as? [String]
+
             var events = [Event]()
+
             let specifiedStartEndDates = startDateMillisecondsSinceEpoch != nil && endDateDateMillisecondsSinceEpoch != nil
             if specifiedStartEndDates {
                 let startDate = Date (timeIntervalSince1970: startDateMillisecondsSinceEpoch!.doubleValue / 1000.0)
@@ -446,9 +452,9 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
                 }
             }
 
-            guard let eventIds = eventIdArgs else {
-              self.encodeJsonAndFinish(codable: events, result: result)
-              return
+            if eventIds == nil && externalEventIds == nil {
+                self.encodeJsonAndFinish(codable: events, result: result)
+                return
             }
 
             if specifiedStartEndDates {
@@ -460,25 +466,29 @@ public class SwiftDeviceCalendarPlugin: NSObject, FlutterPlugin, EKEventViewDele
                 return
             }
 
-            for externalEventId in externalEventIdArgs! {
-                let matchingItems = self.eventStore.calendarItems(withExternalIdentifier: externalEventId)
-                let ekEvent = matchingItems.first as? EKEvent
-                if ekEvent == nil {
-                    continue
-                }
+            if externalEventIds != nil {
+                for externalEventId in externalEventIds {
+                    let matchingItems = self.eventStore.calendarItems(withExternalIdentifier: externalEventId)
+                    let ekEvent = matchingItems.first as? EKEvent
+                    if ekEvent == nil {
+                        continue
+                    }
 
-                let event = createEventFromEkEvent(calendarId: calendarId, ekEvent: ekEvent!)
-                events.append(event)
+                    let event = createEventFromEkEvent(calendarId: calendarId, ekEvent: ekEvent!)
+                    events.append(event)
+                }
             }
 
-            for eventId in eventIds {
-                let ekEvent = self.eventStore.event(withIdentifier: eventId)
-                if ekEvent == nil {
-                    continue
-                }
+            if eventIds != nil {
+                for eventId in eventIds {
+                    let ekEvent = self.eventStore.event(withIdentifier: eventId)
+                    if ekEvent == nil {
+                        continue
+                    }
 
-                let event = createEventFromEkEvent(calendarId: calendarId, ekEvent: ekEvent!)
-                events.append(event)
+                    let event = createEventFromEkEvent(calendarId: calendarId, ekEvent: ekEvent!)
+                    events.append(event)
+                }
             }
 
             self.encodeJsonAndFinish(codable: events, result: result)
